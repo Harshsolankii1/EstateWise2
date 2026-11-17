@@ -237,11 +237,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-st.info(
-    "Model scope: Historical transactions from Sindian District, "
-    "New Taipei City, Taiwan. This application is not validated "
-    "for current market prices or other property markets."
-)
+
 
 
 # --------------------------------------------------
