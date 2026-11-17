@@ -1,0 +1,11 @@
+# Extra dependencies for the training and analysis scripts.
+# Not installed by Streamlit Community Cloud (it only reads requirements.txt).
+#
+# Usage:  pip install -r requirements.txt -r requirements-dev.txt
+
+-r requirements.txt
+
+matplotlib==3.11.2
+seaborn==0.13.2
+openpyxl==3.1.5
+jupyter==1.1.1

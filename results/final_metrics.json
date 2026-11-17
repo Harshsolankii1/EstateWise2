@@ -1,0 +1,12 @@
+{
+    "test_properties": 83,
+    "test_mae": 3.6535873286897185,
+    "test_rmse": 5.448832785505173,
+    "test_r2": 0.8230220318390369,
+    "selected_cv_rmse": 7.59063842004966,
+    "best_parameters": {
+        "model__max_depth": null,
+        "model__min_samples_leaf": 4,
+        "model__n_estimators": 200
+    }
+}

@@ -1,0 +1,21 @@
+# Local Python environment
+.venv/
+venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Local editor settings
+.vscode/
+
+# Notebook checkpoints
+.ipynb_checkpoints/
+
+# Local secrets
+.env
+.streamlit/secrets.toml
+
+# Operating-system files
+.DS_Store
+Thumbs.db
