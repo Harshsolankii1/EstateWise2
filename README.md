@@ -87,12 +87,9 @@ EstateWise/
 ├── app.py
 ├── model.pkl
 ├── requirements.txt
-├── requirements-dev.txt
 ├── README.md
 └── .gitignore
 ```
-
-`requirements.txt` contains only what the Streamlit app imports, so the cloud build stays small. Extra packages needed by the training and analysis scripts live in `requirements-dev.txt`.
 
 The final `report.pdf` will be added when reporting is complete. Additional helper scripts may be included for chart generation.
 
@@ -174,24 +171,14 @@ Run the following commands from the project root.
 
 ### 1. Create a virtual environment
 
-Python 3.12 is required — the pinned `numpy` and `scipy` wheels are not published for 3.11.
-
 ```powershell
-py -3.12 -m venv .venv
+python -m venv .venv
 ```
 
 ### 2. Install dependencies
 
-For the app only:
-
 ```powershell
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
-```
-
-For the app plus the training and analysis scripts:
-
-```powershell
-.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 ```
 
 ### 3. Verify the dataset
@@ -279,36 +266,10 @@ Only load Pickle artifacts from trusted sources. Use a compatible Python and dep
 
 ## Deployment
 
-The app is configured for [Streamlit Community Cloud](https://share.streamlit.io).
-
-Required files at the repository root: `app.py` (entrypoint), `requirements.txt`, `model.pkl`, and `.streamlit/config.toml`.
-
-### Deploy
-
-1. Push this repository to GitHub.
-2. Sign in to <https://share.streamlit.io> with GitHub.
-3. Click **Create app** → **Yup, I have an app**.
-4. Fill in:
-   - Repository: `Harshsolankii1/EstateWise`
-   - Branch: `main`
-   - Main file path: `app.py`
-5. Open **Advanced settings** and set **Python version** to **3.12**.
-6. Click **Deploy**.
-
-The first build installs the pinned dependencies and usually takes a few minutes.
-
-### Deployment notes
-
-- **Python 3.12 is required.** The pinned `numpy 2.5.4` and `scipy 1.18.1` have no wheels for Python 3.11 or earlier. If the app refuses to build, check the Python version in Advanced settings.
-- `scikit-learn` is pinned to `1.9.1`, the version used to train `model.pkl`. A different version raises an unpickle warning and can change predictions.
-- `model.pkl` is committed to the repository, so no training step runs at deploy time.
-- The app reads `model.pkl` relative to `app.py` via `Path(__file__).resolve().parent`, so it works regardless of the working directory Community Cloud uses.
-- If the model fails to load, the app now shows the underlying error instead of a blank page.
+Public deployment is pending. The deployed application URL will be added after deployment and verification.
 
 ## Team Contributions
 
 Add each member's actual name and contribution before submission.
 
 All members should understand the complete workflow.
-#   E s t a t e W i s e 2  
- 
