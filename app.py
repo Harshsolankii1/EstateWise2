@@ -5,9 +5,11 @@ import pandas as pd
 import streamlit as st
 
 
+# --------------------------------------------------
+# Page configuration
+# --------------------------------------------------
 st.set_page_config(
     page_title="EstateWise | Property Valuation",
-    page_icon="🏠",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -16,33 +18,56 @@ PROJECT_DIR = Path(__file__).resolve().parent
 MODEL_PATH = PROJECT_DIR / "model.pkl"
 
 
+# --------------------------------------------------
+# Load the trusted, locally generated model artifact
+# --------------------------------------------------
 @st.cache_resource
-def load_artifact():
-    with open(MODEL_PATH, "rb") as file:
+def load_artifact(model_path, modified_time):
+    with open(model_path, "rb") as file:
         return pickle.load(file)
 
 
 if not MODEL_PATH.exists():
     st.error(
         "Model file not found. Place model.pkl in the same "
-        "directory as app.py, then restart the application."
+        "directory as app.py."
     )
     st.stop()
 
 try:
-    artifact = load_artifact()
-except Exception as error:  # noqa: BLE001 - surface any unpickling failure
-    st.error(
-        "The saved model could not be loaded. This usually means the "
-        "installed scikit-learn version differs from the one used for "
-        "training. Expected scikit-learn 1.9.1.\n\n"
-        f"Details: {error}"
+    artifact = load_artifact(
+        str(MODEL_PATH),
+        MODEL_PATH.stat().st_mtime_ns
     )
+except Exception as exc:
+    st.error(
+        "The saved model could not be loaded. "
+        "Use the Python environment in which the model was trained."
+    )
+    with st.expander("Technical details"):
+        st.code(str(exc))
     st.stop()
+
+required_keys = {
+    "pipeline",
+    "features",
+    "input_min",
+    "input_max",
+    "example_input",
+    "metrics"
+}
+
+if not required_keys.issubset(artifact):
+    st.error("The model artifact is missing required application metadata.")
+    st.stop()
+
 metrics = artifact["metrics"]
 example = artifact["example_input"]
 
 
+# --------------------------------------------------
+# Styling
+# --------------------------------------------------
 st.markdown(
     """
     <style>
@@ -58,29 +83,23 @@ st.markdown(
             font-weight: 600;
             letter-spacing: 0.14em;
             text-transform: uppercase;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.6rem;
         }
 
         .hero-title {
-            font-size: 3rem;
+            font-size: 2.8rem;
             font-weight: 750;
-            letter-spacing: -0.045em;
-            line-height: 1.1;
-            margin-bottom: 0.75rem;
+            letter-spacing: -0.04em;
+            line-height: 1.15;
+            margin-bottom: 0.8rem;
         }
 
         .hero-description {
             color: #64748b;
             font-size: 1.05rem;
             line-height: 1.7;
-            max-width: 800px;
+            max-width: 850px;
             margin-bottom: 1.5rem;
-        }
-
-        .section-description {
-            color: #64748b;
-            font-size: 0.95rem;
-            margin-bottom: 1rem;
         }
 
         .footer-note {
@@ -89,7 +108,6 @@ st.markdown(
             line-height: 1.7;
         }
 
-        div.stButton > button,
         div.stFormSubmitButton > button {
             border-radius: 8px;
             font-weight: 600;
@@ -100,7 +118,54 @@ st.markdown(
 )
 
 
+# --------------------------------------------------
+# Date options matching the dataset's month encoding
+# --------------------------------------------------
+MONTH_NAMES = [
+    "January", "February", "March", "April",
+    "May", "June", "July", "August",
+    "September", "October", "November", "December"
+]
+
+first_month = int(round(
+    float(artifact["input_min"]["transaction_date"]) * 12
+))
+
+last_month = int(round(
+    float(artifact["input_max"]["transaction_date"]) * 12
+))
+
+month_options = list(range(first_month, last_month + 1))
+
+default_month = int(round(
+    float(example["transaction_date"]) * 12
+))
+
+
+def format_transaction_month(month_index):
+    year, zero_based_month = divmod(int(month_index) - 1, 12)
+    return f"{MONTH_NAMES[zero_based_month]} {year}"
+
+
+def training_range(feature, decimals=2):
+    minimum = float(artifact["input_min"][feature])
+    maximum = float(artifact["input_max"][feature])
+    return f"{minimum:.{decimals}f} to {maximum:.{decimals}f}"
+
+
+def reset_form():
+    st.session_state["transaction_month"] = default_month
+    st.session_state["house_age"] = float(example["house_age"])
+    st.session_state["mrt_distance"] = float(example["mrt_distance"])
+    st.session_state["stores"] = int(example["stores"])
+    st.session_state["latitude"] = float(example["latitude"])
+    st.session_state["longitude"] = float(example["longitude"])
+    st.session_state.pop("valuation_result", None)
+
+
+# --------------------------------------------------
 # Sidebar
+# --------------------------------------------------
 with st.sidebar:
     st.title("EstateWise")
     st.caption("PROPERTY VALUATION WORKSPACE")
@@ -109,42 +174,50 @@ with st.sidebar:
 
     st.subheader("Project Overview")
     st.write(
-        "Estimate historical property prices per unit area "
-        "using a trained machine-learning model."
+        "An educational machine-learning application for "
+        "historical property price estimation."
     )
 
-    st.markdown(
-        """
-        - Model: Tuned Random Forest
-        - Input features: 6
-        - Dataset records: 414
-        - Location: Sindian District, Taiwan
-        """
-    )
+    st.write("Model: Tuned Random Forest")
+    st.write("Dataset records: 414")
+    st.write("Input features: 6")
+    st.write("Location: Sindian District, Taiwan")
 
     st.divider()
 
-    st.subheader("How to Use")
+    st.subheader("How It Works")
     st.markdown(
         """
-        1. Review the pre-filled sample property.
-        2. Adjust the property details.
-        3. Select **Generate Estimate**.
-        4. Review the estimate and its limitations.
+        1. Review or modify the property details.
+        2. Select **Generate Estimate**.
+        3. Review the result and coverage warnings.
         """
+    )
+
+    st.button(
+        "Reset to Example Property",
+        on_click=reset_form,
+        use_container_width=True
     )
 
     st.divider()
 
     st.caption(
-        "Academic demonstration. Not a substitute for "
-        "professional property valuation."
+        "The example is an existing training-data record. "
+        "Its prediction is a demonstration, not an independent "
+        "performance test."
+    )
+
+    st.caption(
+        "Academic prototype. Not professional valuation advice."
     )
 
 
+# --------------------------------------------------
 # Header
+# --------------------------------------------------
 st.markdown(
-    '<div class="eyebrow">Machine Learning · Real Estate Analytics</div>',
+    '<div class="eyebrow">Real Estate Analytics · Machine Learning</div>',
     unsafe_allow_html=True
 )
 
@@ -156,63 +229,56 @@ st.markdown(
 st.markdown(
     """
     <div class="hero-description">
-        Explore a model-based estimate of historical property prices
-        using property age, accessibility, nearby amenities,
+        Estimate historical property prices per unit area using
+        property age, transport accessibility, nearby amenities,
         and geographic location.
     </div>
     """,
     unsafe_allow_html=True
 )
 
+st.info(
+    "Model scope: Historical transactions from Sindian District, "
+    "New Taipei City, Taiwan. This application is not validated "
+    "for current market prices or other property markets."
+)
 
 
+# --------------------------------------------------
+# Evaluation overview
+# --------------------------------------------------
+col1, col2, col3, col4 = st.columns(4)
 
-# Performance overview
-metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
+with col1:
+    st.metric("Held-Out Test R²", f"{metrics['test_r2']:.3f}")
 
-with metric_col1:
-    st.metric("Test R²", f"{metrics['test_r2']:.3f}")
-
-with metric_col2:
+with col2:
     st.metric("Test MAE", f"{metrics['test_mae']:.3f}")
 
-with metric_col3:
+with col3:
     st.metric("Test RMSE", f"{metrics['test_rmse']:.3f}")
 
-with metric_col4:
-    st.metric("Test Properties", metrics["test_properties"])
+with col4:
+    st.metric("Test Properties", int(metrics["test_properties"]))
 
 st.caption(
-    "MAE and RMSE are expressed in 10,000 TWD per ping. "
-    "R² is not an accuracy percentage."
+    "MAE and RMSE are measured in 10,000 TWD per ping. "
+    "R² is not an accuracy percentage. These are aggregate test "
+    "metrics, not uncertainty bounds for an individual prediction."
 )
 
 st.divider()
 
 
-def numeric_input(feature, label, help_text, step, display_format):
-    return st.number_input(
-        label=label,
-        min_value=float(artifact["input_min"][feature]),
-        max_value=float(artifact["input_max"][feature]),
-        value=float(example[feature]),
-        step=step,
-        format=display_format,
-        help=help_text
-    )
-
-
-# Property form
+# --------------------------------------------------
+# Input form
+# --------------------------------------------------
 st.subheader("Property Details")
 
-st.markdown(
-    """
-    <div class="section-description">
-        Start with the pre-filled training-data example.
-        Inputs are restricted to the training-data ranges.
-    </div>
-    """,
-    unsafe_allow_html=True
+st.write(
+    "Start with the example property or enter your own values. "
+    "Coordinates can extend beyond the training-data ranges; "
+    "unsupported ranges receive a coverage warning."
 )
 
 with st.form("valuation_form"):
@@ -221,221 +287,326 @@ with st.form("valuation_form"):
     with left:
         st.markdown("#### Property & Transaction")
 
-                month_names = [
-            "January", "February", "March", "April",
-            "May", "June", "July", "August",
-            "September", "October", "November", "December"
-        ]
-
-        # Build month options from the saved training-date range.
-        first_month = int(round(
-            float(artifact["input_min"]["transaction_date"]) * 12
-        ))
-
-        last_month = int(round(
-            float(artifact["input_max"]["transaction_date"]) * 12
-        ))
-
-        month_options = list(range(first_month, last_month + 1))
-
-        default_month = int(round(
-            float(example["transaction_date"]) * 12
-        ))
-
-        def format_transaction_month(month_index):
-            year, zero_based_month = divmod(month_index - 1, 12)
-            return f"{month_names[zero_based_month]} {year}"
-
         selected_month = st.selectbox(
-            label="Historical Transaction Month",
+            "Historical Transaction Month",
             options=month_options,
             index=month_options.index(default_month),
             format_func=format_transaction_month,
+            key="transaction_month",
             help=(
-                "Select a transaction month within the training period. "
-                "This is not a current-market valuation date."
+                "Transaction month within the training period. "
+                "The application converts this selection into "
+                "the dataset's original numerical encoding."
             )
         )
 
         transaction_date = selected_month / 12.0
 
-        house_age = numeric_input(
-            feature="house_age",
-            label="Property Age — Years",
-            help_text="Age of the property at the time of transaction.",
+        house_age = st.number_input(
+            "Property Age — Years",
+            min_value=0.0,
+            value=float(example["house_age"]),
             step=0.5,
-            display_format="%.1f"
+            format="%.1f",
+            key="house_age",
+            help=(
+                "Property age at transaction. "
+                f"Observed training range: {training_range('house_age', 1)} years."
+            )
         )
 
-        mrt_distance = numeric_input(
-            feature="mrt_distance",
-            label="Distance to Nearest MRT Station — Metres",
-            help_text=(
-                "Distance to the nearest Mass Rapid Transit station."
-            ),
+        mrt_distance = st.number_input(
+            "Distance to Nearest MRT Station — Metres",
+            min_value=0.0,
+            value=float(example["mrt_distance"]),
             step=10.0,
-            display_format="%.2f"
+            format="%.2f",
+            key="mrt_distance",
+            help=(
+                "Distance to the nearest Mass Rapid Transit station. "
+                f"Observed training range: {training_range('mrt_distance')} metres."
+            )
         )
 
     with right:
         st.markdown("#### Amenities & Location")
 
         stores = st.number_input(
-            label="Nearby Convenience Stores",
-            min_value=int(artifact["input_min"]["stores"]),
-            max_value=int(artifact["input_max"]["stores"]),
+            "Nearby Convenience Stores",
+            min_value=0,
             value=int(example["stores"]),
             step=1,
-            help="Number of nearby convenience stores recorded in the dataset."
+            key="stores",
+            help=(
+                "Number of nearby convenience stores. "
+                f"Observed training range: {training_range('stores', 0)}."
+            )
         )
 
-        latitude = numeric_input(
-            feature="latitude",
-            label="Latitude",
-            help_text="Latitude within the dataset's geographic coverage.",
+        latitude = st.number_input(
+            "Latitude",
+            min_value=-90.0,
+            max_value=90.0,
+            value=float(example["latitude"]),
             step=0.0001,
-            display_format="%.5f"
+            format="%.5f",
+            key="latitude",
+            help=(
+                "Geographic latitude. "
+                f"Observed training range: {training_range('latitude', 5)}. "
+                "Other valid coordinates are accepted with a warning."
+            )
         )
 
-        longitude = numeric_input(
-            feature="longitude",
-            label="Longitude",
-            help_text="Longitude within the dataset's geographic coverage.",
+        longitude = st.number_input(
+            "Longitude",
+            min_value=-180.0,
+            max_value=180.0,
+            value=float(example["longitude"]),
             step=0.0001,
-            display_format="%.5f"
+            format="%.5f",
+            key="longitude",
+            help=(
+                "Geographic longitude. "
+                f"Observed training range: {training_range('longitude', 5)}. "
+                "Other valid coordinates are accepted with a warning."
+            )
         )
 
     st.caption(
-        "Range checks do not guarantee that every combination "
-        "of inputs represents a real property."
+        "Input validation checks basic validity. It does not establish "
+        "that a property or feature combination exists or is represented "
+        "by the training data."
     )
 
     submitted = st.form_submit_button(
         "Generate Estimate",
         type="primary",
-        width="stretch"
+        use_container_width=True
     )
 
 
-# Prediction
+# --------------------------------------------------
+# Prediction and coverage checks
+# --------------------------------------------------
 if submitted:
     input_values = {
-        "transaction_date": transaction_date,
-        "house_age": house_age,
-        "mrt_distance": mrt_distance,
-        "stores": stores,
-        "latitude": latitude,
-        "longitude": longitude
+        "transaction_date": float(transaction_date),
+        "house_age": float(house_age),
+        "mrt_distance": float(mrt_distance),
+        "stores": int(stores),
+        "latitude": float(latitude),
+        "longitude": float(longitude)
     }
+
+    display_labels = {
+        "transaction_date": "Transaction Month",
+        "house_age": "Property Age",
+        "mrt_distance": "MRT Distance",
+        "stores": "Convenience Stores",
+        "latitude": "Latitude",
+        "longitude": "Longitude"
+    }
+
+    outside_features = []
+
+    for feature in artifact["features"]:
+        entered = input_values[feature]
+        minimum = float(artifact["input_min"][feature])
+        maximum = float(artifact["input_max"][feature])
+
+        if entered < minimum - 1e-6 or entered > maximum + 1e-6:
+            outside_features.append(display_labels[feature])
 
     input_df = pd.DataFrame(
         [input_values],
         columns=artifact["features"]
     )
 
-    prediction = float(
-        artifact["pipeline"].predict(input_df)[0]
-    )
+    try:
+        prediction = float(
+            artifact["pipeline"].predict(input_df)[0]
+        )
+
+        st.session_state["valuation_result"] = {
+            "prediction": prediction,
+            "inputs": input_values,
+            "transaction_month": format_transaction_month(selected_month),
+            "outside_features": outside_features
+        }
+
+    except Exception as exc:
+        st.session_state.pop("valuation_result", None)
+        st.error("The estimate could not be generated.")
+
+        with st.expander("Technical details"):
+            st.code(str(exc))
+
+
+# --------------------------------------------------
+# Result display
+# --------------------------------------------------
+if "valuation_result" in st.session_state:
+    result = st.session_state["valuation_result"]
+    prediction = result["prediction"]
 
     st.divider()
     st.subheader("Valuation Result")
 
+    st.caption(
+        "This result corresponds to the last submitted inputs. "
+        "After changing the form, select Generate Estimate again."
+    )
+
+    if result["outside_features"]:
+        st.warning(
+            "Outside observed training ranges: "
+            + ", ".join(result["outside_features"])
+            + ". The output below is exploratory and is not "
+            "validated for these inputs."
+        )
+    else:
+        st.caption(
+            "All submitted values are within their individual training "
+            "ranges. This does not guarantee geographic coverage, "
+            "a realistic combination, or prediction reliability."
+        )
+
     if prediction <= 0:
         st.warning(
             "The model returned a non-positive estimate. "
-            "This result should not be interpreted as a valid valuation."
+            "Do not interpret it as a valid property valuation."
         )
     else:
-        result_col, context_col = st.columns(
-            [1.2, 1],
+        result_col, explanation_col = st.columns(
+            [1.1, 1],
             gap="large"
         )
 
         with result_col:
             st.metric(
-                label="Estimated Price per Unit Area",
-                value=f"{prediction:.2f}",
-                help="Unit: 10,000 New Taiwan Dollars per ping."
+                "Historical Price-per-Unit-Area Estimate",
+                f"{prediction:.2f}"
             )
 
             st.write("Unit: 10,000 TWD per ping")
+            st.caption("TWD: New Taiwan Dollar")
 
-        with context_col:
-            st.markdown("#### Interpretation")
+        with explanation_col:
+            st.markdown("#### What This Means")
             st.write(
-                "This is a historical, model-based estimate "
-                "of price per unit area—not the total property price."
+                "This is an estimate of historical price per unit area, "
+                "not the total sale price of the property."
             )
             st.write(
-                "The estimate is not a guaranteed transaction price, "
-                "a current market quotation, or a confidence interval."
+                "It is not a current market quotation, guaranteed "
+                "transaction price, or prediction interval."
             )
 
         with st.expander("View Submitted Property Details"):
-            display_names = {
-                "transaction_date": "Transaction Date",
-                "house_age": "Property Age (Years)",
-                "mrt_distance": "MRT Distance (Metres)",
-                "stores": "Convenience Stores",
-                "latitude": "Latitude",
-                "longitude": "Longitude"
-            }
+            submitted_inputs = result["inputs"]
 
-            submitted_details = pd.DataFrame({
+            detail_table = pd.DataFrame({
                 "Feature": [
-                    display_names[column]
-                    for column in artifact["features"]
+                    "Transaction Month",
+                    "Property Age (Years)",
+                    "MRT Distance (Metres)",
+                    "Nearby Convenience Stores",
+                    "Latitude",
+                    "Longitude"
                 ],
-                "Value": [
-                    input_values[column]
-                    for column in artifact["features"]
+                "Submitted Value": [
+                    result["transaction_month"],
+                    f"{submitted_inputs['house_age']:.1f}",
+                    f"{submitted_inputs['mrt_distance']:.2f}",
+                    str(submitted_inputs["stores"]),
+                    f"{submitted_inputs['latitude']:.5f}",
+                    f"{submitted_inputs['longitude']:.5f}"
                 ]
             })
 
             st.dataframe(
-                submitted_details,
+                detail_table,
                 hide_index=True,
-                width="stretch"
+                use_container_width=True
             )
 
 
-# Methodology and limitations
+# --------------------------------------------------
+# Documentation
+# --------------------------------------------------
 st.divider()
+
+with st.expander("Observed Training-Data Ranges"):
+    range_table = pd.DataFrame({
+        "Feature": [
+            "Transaction Period",
+            "Property Age (Years)",
+            "MRT Distance (Metres)",
+            "Nearby Convenience Stores",
+            "Latitude",
+            "Longitude"
+        ],
+        "Observed Range": [
+            (
+                f"{format_transaction_month(first_month)} – "
+                f"{format_transaction_month(last_month)}"
+            ),
+            training_range("house_age", 1),
+            training_range("mrt_distance", 2),
+            training_range("stores", 0),
+            training_range("latitude", 5),
+            training_range("longitude", 5)
+        ]
+    })
+
+    st.dataframe(
+        range_table,
+        hide_index=True,
+        use_container_width=True
+    )
+
+    st.caption(
+        "These are separate feature ranges, not a verified service-area "
+        "boundary. Outside-range predictions are exploratory."
+    )
 
 with st.expander("Methodology & Model Evaluation"):
     st.markdown(
         """
-        - Dataset: UCI Real Estate Valuation.
-        - Training / test split: 331 / 83 properties.
-        - Compared models: Linear Regression, Decision Tree,
-          and Random Forest.
-        - Model development: 5-fold cross-validation.
-        - Hyperparameter tuning: GridSearchCV.
-        - Final evaluation: Held-out test data.
-        - Inference: Saved pipeline; no retraining on prediction.
+        - Dataset: UCI Real Estate Valuation
+        - Total records: 414
+        - Training / test split: 331 / 83 properties
+        - Compared models: Linear Regression, Decision Tree, Random Forest
+        - Model comparison: Shuffled 5-fold cross-validation
+        - Hyperparameter tuning: GridSearchCV
+        - Final evaluation: Held-out test subset
+        - Application inference: Saved pipeline, without retraining
         """
     )
 
-    st.markdown("##### Selected Random Forest Settings")
-
+    st.markdown("##### Selected Hyperparameters")
     st.json(metrics["best_parameters"])
 
     st.caption(
-        "Reported test metrics summarize performance on one "
-        "held-out split. They do not establish performance in "
-        "other locations or future market conditions."
+        "Results describe one held-out split. They do not establish "
+        "performance across different markets or future transactions."
     )
 
 with st.expander("Scope & Limitations"):
     st.markdown(
         """
-        - The model represents a small, geographically specific,
-          historical dataset.
-        - It is not validated for Indian properties or current prices.
-        - The target is price per unit area, not total sale price.
-        - Important property attributes outside the dataset
-          are not represented.
-        - Predictions are estimates, not professional advice.
+        - The model represents a small, historical, geographically
+          specific dataset.
+        - It is not validated for current market prices or Indian properties.
+        - The output is price per unit area, not total property value.
+        - Features such as floor area, BHK, and property condition are not
+          included in this model.
+        - Basic input validity does not guarantee a realistic property.
+        - Coordinates outside the observed training ranges are accepted
+          for exploration, not as supported valuation locations.
+        - The application does not provide a calibrated uncertainty interval.
+        - This is an educational prototype, not professional valuation advice.
         """
     )
 
