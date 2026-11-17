@@ -221,16 +221,43 @@ with st.form("valuation_form"):
     with left:
         st.markdown("#### Property & Transaction")
 
-        transaction_date = numeric_input(
-            feature="transaction_date",
-            label="Transaction Date — Decimal Year",
-            help_text=(
-                "Historical transaction date in the dataset's "
-                "decimal-year format. This is not a current-date input."
-            ),
-            step=0.01,
-            display_format="%.6f"
+                month_names = [
+            "January", "February", "March", "April",
+            "May", "June", "July", "August",
+            "September", "October", "November", "December"
+        ]
+
+        # Build month options from the saved training-date range.
+        first_month = int(round(
+            float(artifact["input_min"]["transaction_date"]) * 12
+        ))
+
+        last_month = int(round(
+            float(artifact["input_max"]["transaction_date"]) * 12
+        ))
+
+        month_options = list(range(first_month, last_month + 1))
+
+        default_month = int(round(
+            float(example["transaction_date"]) * 12
+        ))
+
+        def format_transaction_month(month_index):
+            year, zero_based_month = divmod(month_index - 1, 12)
+            return f"{month_names[zero_based_month]} {year}"
+
+        selected_month = st.selectbox(
+            label="Historical Transaction Month",
+            options=month_options,
+            index=month_options.index(default_month),
+            format_func=format_transaction_month,
+            help=(
+                "Select a transaction month within the training period. "
+                "This is not a current-market valuation date."
+            )
         )
+
+        transaction_date = selected_month / 12.0
 
         house_age = numeric_input(
             feature="house_age",
