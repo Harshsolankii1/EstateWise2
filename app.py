@@ -164,11 +164,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-st.info(
-    "Dataset scope: Historical transactions from Sindian District, "
-    "New Taipei City, Taiwan. Estimates are not validated for "
-    "current market conditions or properties in India."
-)
+
 
 
 # Performance overview
