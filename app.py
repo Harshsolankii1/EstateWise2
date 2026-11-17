@@ -586,7 +586,29 @@ with st.expander("Methodology & Model Evaluation"):
     )
 
     st.markdown("##### Selected Hyperparameters")
-    st.json(metrics["best_parameters"])
+
+    selected_parameters = metrics["best_parameters"]
+
+    max_depth = selected_parameters["model__max_depth"]
+
+    parameter_table = pd.DataFrame({
+        "Hyperparameter": [
+            "Number of Trees",
+            "Maximum Tree Depth",
+            "Minimum Samples per Leaf"
+        ],
+        "Selected Value": [
+            str(selected_parameters["model__n_estimators"]),
+            "No Fixed Depth Limit" if max_depth is None else str(max_depth),
+            str(selected_parameters["model__min_samples_leaf"])
+        ]
+    })
+
+    st.dataframe(
+        parameter_table,
+        hide_index=True,
+        use_container_width=True
+    )
 
     st.caption(
         "Results describe one held-out split. They do not establish "
