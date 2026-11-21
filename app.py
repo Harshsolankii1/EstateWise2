@@ -1,15 +1,13 @@
 from pathlib import Path
 import pickle
 
+import numpy as np
 import pandas as pd
 import streamlit as st
 
 
-# --------------------------------------------------
-# Page configuration
-# --------------------------------------------------
 st.set_page_config(
-    page_title="EstateWise | Property Valuation",
+    page_title="EstateWise India | Property Valuation",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -18,9 +16,6 @@ PROJECT_DIR = Path(__file__).resolve().parent
 MODEL_PATH = PROJECT_DIR / "model.pkl"
 
 
-# --------------------------------------------------
-# Load the trusted, locally generated model artifact
-# --------------------------------------------------
 @st.cache_resource
 def load_artifact(model_path, modified_time):
     with open(model_path, "rb") as file:
@@ -29,8 +24,8 @@ def load_artifact(model_path, modified_time):
 
 if not MODEL_PATH.exists():
     st.error(
-        "Model file not found. Place model.pkl in the same "
-        "directory as app.py."
+        "Model file not found. First run train_india_model.py, "
+        "then place model.pkl in this folder."
     )
     st.stop()
 
@@ -40,77 +35,34 @@ try:
         MODEL_PATH.stat().st_mtime_ns
     )
 except Exception as exc:
-    st.error(
-        "The saved model could not be loaded. "
-        "Use the Python environment in which the model was trained."
-    )
+    st.error("The saved model could not be loaded.")
     with st.expander("Technical details"):
         st.code(str(exc))
-    st.stop()
-
-required_keys = {
-    "pipeline",
-    "features",
-    "input_min",
-    "input_max",
-    "example_input",
-    "metrics"
-}
-
-if not required_keys.issubset(artifact):
-    st.error("The model artifact is missing required application metadata.")
     st.stop()
 
 metrics = artifact["metrics"]
 example = artifact["example_input"]
 
 
-# --------------------------------------------------
-# Styling
-# --------------------------------------------------
 st.markdown(
     """
     <style>
         .block-container {
             max-width: 1200px;
             padding-top: 2.5rem;
-            padding-bottom: 2rem;
-        }
-
-        .eyebrow {
-            color: #64748b;
-            font-size: 0.8rem;
-            font-weight: 600;
-            letter-spacing: 0.14em;
-            text-transform: uppercase;
-            margin-bottom: 0.6rem;
         }
 
         .hero-title {
-            font-size: 2.8rem;
+            font-size: 2.7rem;
             font-weight: 750;
             letter-spacing: -0.04em;
-            line-height: 1.15;
-            margin-bottom: 0.8rem;
+            margin-bottom: 0.7rem;
         }
 
         .hero-description {
             color: #64748b;
             font-size: 1.05rem;
             line-height: 1.7;
-            max-width: 850px;
-            margin-bottom: 1.5rem;
-        }
-
-        .footer-note {
-            color: #64748b;
-            font-size: 0.8rem;
-            line-height: 1.7;
-        }
-
-        div.stFormSubmitButton > button {
-            border-radius: 8px;
-            font-weight: 600;
         }
     </style>
     """,
@@ -118,108 +70,35 @@ st.markdown(
 )
 
 
-# --------------------------------------------------
-# Date options matching the dataset's month encoding
-# --------------------------------------------------
-MONTH_NAMES = [
-    "January", "February", "March", "April",
-    "May", "June", "July", "August",
-    "September", "October", "November", "December"
-]
-
-first_month = int(round(
-    float(artifact["input_min"]["transaction_date"]) * 12
-))
-
-last_month = int(round(
-    float(artifact["input_max"]["transaction_date"]) * 12
-))
-
-month_options = list(range(first_month, last_month + 1))
-
-default_month = int(round(
-    float(example["transaction_date"]) * 12
-))
-
-
-def format_transaction_month(month_index):
-    year, zero_based_month = divmod(int(month_index) - 1, 12)
-    return f"{MONTH_NAMES[zero_based_month]} {year}"
-
-
-def training_range(feature, decimals=2):
-    minimum = float(artifact["input_min"][feature])
-    maximum = float(artifact["input_max"][feature])
-    return f"{minimum:.{decimals}f} to {maximum:.{decimals}f}"
-
-
-def reset_form():
-    st.session_state["transaction_month"] = default_month
-    st.session_state["house_age"] = float(example["house_age"])
-    st.session_state["mrt_distance"] = float(example["mrt_distance"])
-    st.session_state["stores"] = int(example["stores"])
-    st.session_state["latitude"] = float(example["latitude"])
-    st.session_state["longitude"] = float(example["longitude"])
-    st.session_state.pop("valuation_result", None)
-
-
-# --------------------------------------------------
-# Sidebar
-# --------------------------------------------------
 with st.sidebar:
-    st.title("EstateWise")
+    st.title("EstateWise India")
     st.caption("PROPERTY VALUATION WORKSPACE")
 
     st.divider()
-
     st.subheader("Project Overview")
     st.write(
         "An educational machine-learning application for "
-        "historical property price estimation."
+        "Indian property price-per-sq-ft estimation."
     )
 
     st.write("Model: Tuned Random Forest")
     st.write("Dataset records: 414")
-    st.write("Input features: 6")
-    st.write("Location: Sindian District, Taiwan")
+    st.write("Prediction unit: INR per sq ft")
 
     st.divider()
-
     st.subheader("How It Works")
     st.markdown(
         """
-        1. Review or modify the property details.
-        2. Select **Generate Estimate**.
-        3. Review the result and coverage warnings.
+        1. Select the property location.
+        2. Enter property and transaction details.
+        3. Select **Generate Estimate**.
         """
-    )
-
-    st.button(
-        "Reset to Example Property",
-        on_click=reset_form,
-        use_container_width=True
-    )
-
-    st.divider()
-
-    st.caption(
-        "The example is an existing training-data record. "
-        "Its prediction is a demonstration, not an independent "
-        "performance test."
     )
 
     st.caption(
         "Academic prototype. Not professional valuation advice."
     )
 
-
-# --------------------------------------------------
-# Header
-# --------------------------------------------------
-st.markdown(
-    '<div class="eyebrow">Real Estate Analytics · Machine Learning</div>',
-    unsafe_allow_html=True
-)
 
 st.markdown(
     '<div class="hero-title">Property Valuation Workspace</div>',
@@ -229,9 +108,9 @@ st.markdown(
 st.markdown(
     """
     <div class="hero-description">
-        Estimate historical property prices per unit area using
+        Estimate historical property prices per square foot using
         property age, transport accessibility, nearby amenities,
-        and geographic location.
+        property area, and geographic location.
     </div>
     """,
     unsafe_allow_html=True
@@ -240,140 +119,113 @@ st.markdown(
 
 
 
-# --------------------------------------------------
-# Evaluation overview
-# --------------------------------------------------
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     st.metric("Held-Out Test R²", f"{metrics['test_r2']:.3f}")
 
 with col2:
-    st.metric("Test MAE", f"{metrics['test_mae']:.3f}")
+    st.metric("Test MAE", f"{metrics['test_mae']:.2f}")
 
 with col3:
-    st.metric("Test RMSE", f"{metrics['test_rmse']:.3f}")
+    st.metric("Test RMSE", f"{metrics['test_rmse']:.2f}")
 
 with col4:
     st.metric("Test Properties", int(metrics["test_properties"]))
 
 st.caption(
-    "MAE and RMSE are measured in 10,000 TWD per ping. "
-    "R² is not an accuracy percentage. These are aggregate test "
-    "metrics, not uncertainty bounds for an individual prediction."
+    "MAE and RMSE are measured in INR per square foot. "
+    "R² is not an accuracy percentage."
 )
 
 st.divider()
 
 
-# --------------------------------------------------
-# Input form
-# --------------------------------------------------
 st.subheader("Property Details")
-
-st.write(
-    "Start with the example property or enter your own values. "
-    "Coordinates can extend beyond the training-data ranges; "
-    "unsupported ranges receive a coverage warning."
-)
 
 with st.form("valuation_form"):
     left, right = st.columns(2, gap="large")
 
     with left:
-        st.markdown("#### Property & Transaction")
+        st.markdown("#### Location")
 
-        selected_month = st.selectbox(
-            "Historical Transaction Month",
-            options=month_options,
-            index=month_options.index(default_month),
-            format_func=format_transaction_month,
-            key="transaction_month",
-            help=(
-                "Transaction month within the training period. "
-                "The application converts this selection into "
-                "the dataset's original numerical encoding."
-            )
+        city = st.selectbox(
+            "City",
+            options=artifact["cities"],
+            index=artifact["cities"].index(example["City"])
         )
 
-        transaction_date = selected_month / 12.0
-
-        house_age = st.number_input(
-            "Property Age — Years",
-            min_value=0.0,
-            value=float(example["house_age"]),
-            step=0.5,
-            format="%.1f",
-            key="house_age",
-            help=(
-                "Property age at transaction. "
-                f"Observed training range: {training_range('house_age', 1)} years."
-            )
+        state = st.selectbox(
+            "State",
+            options=artifact["states"],
+            index=artifact["states"].index(example["State"])
         )
 
-        mrt_distance = st.number_input(
-            "Distance to Nearest MRT Station — Metres",
-            min_value=0.0,
-            value=float(example["mrt_distance"]),
-            step=10.0,
-            format="%.2f",
-            key="mrt_distance",
-            help=(
-                "Distance to the nearest Mass Rapid Transit station. "
-                f"Observed training range: {training_range('mrt_distance')} metres."
-            )
-        )
-
-    with right:
-        st.markdown("#### Amenities & Location")
-
-        stores = st.number_input(
-            "Nearby Convenience Stores",
-            min_value=0,
-            value=int(example["stores"]),
-            step=1,
-            key="stores",
-            help=(
-                "Number of nearby convenience stores. "
-                f"Observed training range: {training_range('stores', 0)}."
-            )
+        locality = st.selectbox(
+            "Locality",
+            options=artifact["localities"],
+            index=artifact["localities"].index(example["Locality"])
         )
 
         latitude = st.number_input(
             "Latitude",
             min_value=-90.0,
             max_value=90.0,
-            value=float(example["latitude"]),
+            value=float(example["Latitude"]),
             step=0.0001,
-            format="%.5f",
-            key="latitude",
-            help=(
-                "Geographic latitude. "
-                f"Observed training range: {training_range('latitude', 5)}. "
-                "Other valid coordinates are accepted with a warning."
-            )
+            format="%.5f"
         )
 
         longitude = st.number_input(
             "Longitude",
             min_value=-180.0,
             max_value=180.0,
-            value=float(example["longitude"]),
+            value=float(example["Longitude"]),
             step=0.0001,
-            format="%.5f",
-            key="longitude",
-            help=(
-                "Geographic longitude. "
-                f"Observed training range: {training_range('longitude', 5)}. "
-                "Other valid coordinates are accepted with a warning."
-            )
+            format="%.5f"
         )
 
-    st.caption(
-        "Input validation checks basic validity. It does not establish "
-        "that a property or feature combination exists or is represented "
-        "by the training data."
-    )
+    with right:
+        st.markdown("#### Property & Transaction")
+
+        transaction_date = st.date_input(
+            "Transaction Date",
+            value=pd.Timestamp(
+    year=int(example["Transaction_Year"]),
+    month=int(example["Transaction_Month"]),
+    day=1
+    ).date()
+        )
+
+        house_age = st.number_input(
+            "Property Age — Years",
+            min_value=0.0,
+            value=float(example["Property_Age_Years"]),
+            step=1.0
+        )
+
+        metro_distance = st.number_input(
+            "Distance to Metro — Kilometres",
+            min_value=0.0,
+            value=float(example["Distance_to_Metro_km"]),
+            step=0.1,
+            format="%.2f"
+        )
+
+        stores = st.number_input(
+            "Nearby Convenience Stores",
+            min_value=0,
+            value=int(example["Nearby_Convenience_Stores"]),
+            step=1
+        )
+
+        area_sqft = st.number_input(
+            "Property Area — Square Feet",
+            min_value=1.0,
+            value=float(example["Property_Area_sqft"]),
+            step=10.0,
+            format="%.0f"
+        )
 
     submitted = st.form_submit_button(
         "Generate Estimate",
@@ -382,37 +234,28 @@ with st.form("valuation_form"):
     )
 
 
-# --------------------------------------------------
-# Prediction and coverage checks
-# --------------------------------------------------
 if submitted:
+    transaction_timestamp = pd.Timestamp(transaction_date)
+
     input_values = {
-        "transaction_date": float(transaction_date),
-        "house_age": float(house_age),
-        "mrt_distance": float(mrt_distance),
-        "stores": int(stores),
-        "latitude": float(latitude),
-        "longitude": float(longitude)
+        "Property_Age_Years": float(house_age),
+        "Distance_to_Metro_km": float(metro_distance),
+        "Nearby_Convenience_Stores": int(stores),
+        "Latitude": float(latitude),
+        "Longitude": float(longitude),
+        "Property_Area_sqft": float(area_sqft),
+        "City": city,
+        "State": state,
+        "Locality": locality,
+        "Transaction_Year": transaction_timestamp.year,
+        "Transaction_Month": transaction_timestamp.month,
+        "Transaction_Seasonal_Value": np.sin(
+            2 * np.pi * transaction_timestamp.month / 12
+        ),
+        "Transaction_Seasonal_Cosine": np.cos(
+            2 * np.pi * transaction_timestamp.month / 12
+        )
     }
-
-    display_labels = {
-        "transaction_date": "Transaction Month",
-        "house_age": "Property Age",
-        "mrt_distance": "MRT Distance",
-        "stores": "Convenience Stores",
-        "latitude": "Latitude",
-        "longitude": "Longitude"
-    }
-
-    outside_features = []
-
-    for feature in artifact["features"]:
-        entered = input_values[feature]
-        minimum = float(artifact["input_min"][feature])
-        maximum = float(artifact["input_max"][feature])
-
-        if entered < minimum - 1e-6 or entered > maximum + 1e-6:
-            outside_features.append(display_labels[feature])
 
     input_df = pd.DataFrame(
         [input_values],
@@ -427,8 +270,7 @@ if submitted:
         st.session_state["valuation_result"] = {
             "prediction": prediction,
             "inputs": input_values,
-            "transaction_month": format_transaction_month(selected_month),
-            "outside_features": outside_features
+            "area_sqft": float(area_sqft)
         }
 
     except Exception as exc:
@@ -439,34 +281,13 @@ if submitted:
             st.code(str(exc))
 
 
-# --------------------------------------------------
-# Result display
-# --------------------------------------------------
 if "valuation_result" in st.session_state:
     result = st.session_state["valuation_result"]
     prediction = result["prediction"]
+    area = result["area_sqft"]
 
     st.divider()
     st.subheader("Valuation Result")
-
-    st.caption(
-        "This result corresponds to the last submitted inputs. "
-        "After changing the form, select Generate Estimate again."
-    )
-
-    if result["outside_features"]:
-        st.warning(
-            "Outside observed training ranges: "
-            + ", ".join(result["outside_features"])
-            + ". The output below is exploratory and is not "
-            "validated for these inputs."
-        )
-    else:
-        st.caption(
-            "All submitted values are within their individual training "
-            "ranges. This does not guarantee geographic coverage, "
-            "a realistic combination, or prediction reliability."
-        )
 
     if prediction <= 0:
         st.warning(
@@ -481,43 +302,62 @@ if "valuation_result" in st.session_state:
 
         with result_col:
             st.metric(
-                "Historical Price-per-Unit-Area Estimate",
-                f"{prediction:.2f}"
+                "Estimated Price per Square Foot",
+                f"₹{prediction:,.2f}"
             )
 
-            st.write("Unit: 10,000 TWD per ping")
-            st.caption("TWD: New Taiwan Dollar")
+            st.caption("Unit: Indian Rupees per square foot")
+
+            estimated_total = prediction * area
+
+            st.metric(
+                "Estimated Total Property Value",
+                f"₹{estimated_total:,.0f}"
+            )
+
+            st.caption(
+                f"Calculated as price per sq ft × {area:,.0f} sq ft."
+            )
 
         with explanation_col:
             st.markdown("#### What This Means")
             st.write(
-                "This is an estimate of historical price per unit area, "
-                "not the total sale price of the property."
+                "This is a historical price-per-square-foot estimate "
+                "for the entered property details."
             )
+
             st.write(
-                "It is not a current market quotation, guaranteed "
-                "transaction price, or prediction interval."
+                "It is not a guaranteed sale price, current market "
+                "quotation, or professional valuation."
             )
 
         with st.expander("View Submitted Property Details"):
-            submitted_inputs = result["inputs"]
+            inputs = result["inputs"]
 
             detail_table = pd.DataFrame({
                 "Feature": [
-                    "Transaction Month",
-                    "Property Age (Years)",
-                    "MRT Distance (Metres)",
+                    "City",
+                    "State",
+                    "Locality",
+                    "Transaction Date",
+                    "Property Age",
+                    "Metro Distance",
                     "Nearby Convenience Stores",
+                    "Property Area",
                     "Latitude",
                     "Longitude"
                 ],
                 "Submitted Value": [
-                    result["transaction_month"],
-                    f"{submitted_inputs['house_age']:.1f}",
-                    f"{submitted_inputs['mrt_distance']:.2f}",
-                    str(submitted_inputs["stores"]),
-                    f"{submitted_inputs['latitude']:.5f}",
-                    f"{submitted_inputs['longitude']:.5f}"
+                    inputs["City"],
+                    inputs["State"],
+                    inputs["Locality"],
+                    transaction_date.strftime("%d %B %Y"),
+                    f"{inputs['Property_Age_Years']:.0f} years",
+                    f"{inputs['Distance_to_Metro_km']:.2f} km",
+                    str(inputs["Nearby_Convenience_Stores"]),
+                    f"{inputs['Property_Area_sqft']:,.0f} sq ft",
+                    f"{inputs['Latitude']:.5f}",
+                    f"{inputs['Longitude']:.5f}"
                 ]
             })
 
@@ -528,112 +368,57 @@ if "valuation_result" in st.session_state:
             )
 
 
-# --------------------------------------------------
-# Documentation
-# --------------------------------------------------
 st.divider()
-
-with st.expander("Observed Training-Data Ranges"):
-    range_table = pd.DataFrame({
-        "Feature": [
-            "Transaction Period",
-            "Property Age (Years)",
-            "MRT Distance (Metres)",
-            "Nearby Convenience Stores",
-            "Latitude",
-            "Longitude"
-        ],
-        "Observed Range": [
-            (
-                f"{format_transaction_month(first_month)} – "
-                f"{format_transaction_month(last_month)}"
-            ),
-            training_range("house_age", 1),
-            training_range("mrt_distance", 2),
-            training_range("stores", 0),
-            training_range("latitude", 5),
-            training_range("longitude", 5)
-        ]
-    })
-
-    st.dataframe(
-        range_table,
-        hide_index=True,
-        use_container_width=True
-    )
-
-    st.caption(
-        "These are separate feature ranges, not a verified service-area "
-        "boundary. Outside-range predictions are exploratory."
-    )
 
 with st.expander("Methodology & Model Evaluation"):
     st.markdown(
         """
-        - Dataset: UCI Real Estate Valuation
+        - Dataset: India real-estate valuation dataset
         - Total records: 414
         - Training / test split: 331 / 83 properties
         - Compared models: Linear Regression, Decision Tree, Random Forest
         - Model comparison: Shuffled 5-fold cross-validation
         - Hyperparameter tuning: GridSearchCV
         - Final evaluation: Held-out test subset
+        - Target: Price per square foot in INR
         - Application inference: Saved pipeline, without retraining
         """
     )
 
-    st.markdown("##### Selected Hyperparameters")
-
-    selected_parameters = metrics["best_parameters"]
-
-    max_depth = selected_parameters["model__max_depth"]
-
-    parameter_table = pd.DataFrame({
-        "Hyperparameter": [
-            "Number of Trees",
-            "Maximum Tree Depth",
-            "Minimum Samples per Leaf"
-        ],
-        "Selected Value": [
-            str(selected_parameters["model__n_estimators"]),
-            "No Fixed Depth Limit" if max_depth is None else str(max_depth),
-            str(selected_parameters["model__min_samples_leaf"])
-        ]
-    })
-
+    st.markdown("##### Model Comparison")
     st.dataframe(
-        parameter_table,
+        pd.DataFrame(metrics["comparison"]),
         hide_index=True,
         use_container_width=True
     )
 
+    st.markdown("##### Selected Hyperparameters")
+    st.json(metrics["best_parameters"])
+
     st.caption(
         "Results describe one held-out split. They do not establish "
-        "performance across different markets or future transactions."
+        "performance across all Indian cities or future transactions."
     )
 
 with st.expander("Scope & Limitations"):
     st.markdown(
         """
-        - The model represents a small, historical, geographically
-          specific dataset.
-        - It is not validated for current market prices or Indian properties.
-        - The output is price per unit area, not total property value.
-        - Features such as floor area, BHK, and property condition are not
-          included in this model.
-        - Basic input validity does not guarantee a realistic property.
-        - Coordinates outside the observed training ranges are accepted
-          for exploration, not as supported valuation locations.
-        - The application does not provide a calibrated uncertainty interval.
+        - The model is trained on a small, historical dataset.
+        - It is not validated for current market prices.
+        - The primary prediction is price per square foot in INR.
+        - Total value is calculated by multiplying the estimate by
+          entered property area.
+        - Locality, city, and state are categorical inputs.
+        - Coordinates outside the training-data coverage may produce
+          unreliable estimates.
         - This is an educational prototype, not professional valuation advice.
         """
     )
 
 st.markdown(
     """
-    <div class="footer-note">
-        EstateWise · Academic Machine Learning Project<br>
-        Data source: UCI Machine Learning Repository —
-        Real Estate Valuation.
+    <div class="hero-description">
+        EstateWise India · Academic Machine Learning Project
     </div>
     """,
     unsafe_allow_html=True
