@@ -1,43 +1,50 @@
-# EstateWise India — Property Valuation Workspace
+# EstateWise India — Real Estate Valuation
 
-EstateWise India is an educational machine-learning web application that estimates historical property prices per square foot in Indian Rupees (INR). It uses property characteristics, location details, transport accessibility, nearby amenities, and transaction information to generate an estimate.
+An end-to-end machine-learning project for estimating historical property prices per square foot using property characteristics, transport accessibility, nearby amenities, property area, and geographic location.
 
-The application uses a tuned Random Forest regression model and is built with Streamlit.
+The project includes exploratory data analysis, comparison of three regression algorithms, cross-validation, hyperparameter tuning, held-out evaluation, and a Streamlit prediction interface.
 
-## Project Objective
+## Project Status
 
-The objective of this project is to demonstrate an end-to-end machine-learning workflow:
+- Data preparation: Complete
+- Baseline model comparison: To be updated after training
+- Hyperparameter tuning: To be updated after training
+- Held-out test evaluation: To be updated after training
+- Saved-model verification: To be updated after training
+- Local Streamlit application: Working
+- Analysis notebook: To be updated
+- Public deployment: Pending
+- Final project report: Pending
 
-- Load and understand a real-estate dataset.
-- Perform exploratory data analysis.
-- Compare multiple regression models.
-- Use cross-validation for reliable model comparison.
-- Tune the selected model using GridSearchCV.
-- Evaluate the final model on a held-out test set.
-- Save the trained pipeline for inference.
-- Deploy an interactive Streamlit application.
+## Problem Statement
+
+Estimate historical property prices per square foot from property, location, and transaction-related input features using an India real-estate valuation dataset.
+
+This is a regression task. The primary output is a numerical estimate of price per square foot in Indian Rupees (INR), not a guaranteed total sale price.
+
+The application also calculates an estimated total property value using the entered property area:
+
+```text
+Estimated Total Property Value = Estimated Price per Sq Ft × Property Area
+```
 
 ## Dataset
 
-The project uses the dataset:
+- Dataset: India Real Estate Valuation
+- File: `india_real_estate_valuation.xlsx`
+- Worksheet: `India_Property_Data`
+- Records: 414
+- Target: `Price_per_sqft_INR`
+- Target unit: Indian Rupees per square foot
+- Geographic coverage: Multiple Indian cities included in the dataset
 
-**`india_real_estate_valuation.xlsx`**
-
-The main worksheet is `India_Property_Data`, containing 414 property records.
-
-### Target Variable
-
-The model predicts:
-
-**Price per square foot in INR (`Price_per_sqft_INR`)**
-
-The application also calculates an estimated total property value by multiplying the predicted price per square foot by the entered property area.
+The dataset includes property age, distance to metro, nearby convenience stores, geographic coordinates, property area, transaction date, city, state, and locality.
 
 ### Input Features
 
 | Feature | Description |
 |---|---|
-| Property Age | Age of the property in years |
+| Property Age | Property age in years |
 | Distance to Metro | Distance to the nearest metro station in kilometres |
 | Nearby Convenience Stores | Number of nearby convenience stores |
 | Latitude | Geographic latitude |
@@ -48,209 +55,214 @@ The application also calculates an estimated total property value by multiplying
 | Locality | Locality or neighbourhood |
 | Transaction Date | Historical transaction date |
 
-## Machine-Learning Workflow
+The `Property_ID` column is a record identifier and is excluded from predictive features.
 
-### Models Compared
+## Technology Stack
 
-The following regression models were compared:
+- Python
+- pandas
+- NumPy
+- scikit-learn
+- Streamlit
+- Pickle
+- Git and GitHub for version control and publication
 
-- Linear Regression
-- Decision Tree Regressor
-- Random Forest Regressor
-
-### Model Evaluation
-
-Model performance was compared using shuffled 5-fold cross-validation.
-
-The evaluation metrics were:
-
-| Metric | Meaning |
-|---|---|
-| CV MAE | Mean Absolute Error during cross-validation |
-| CV RMSE | Root Mean Squared Error during cross-validation |
-| CV R² | Coefficient of determination during cross-validation |
-
-Lower MAE and RMSE values indicate better prediction accuracy. Higher R² indicates that the model explains more variation in the target variable.
-
-### Hyperparameter Tuning
-
-The Random Forest model was tuned using `GridSearchCV`.
-
-The tuned hyperparameters include:
-
-- `n_estimators`
-- `max_depth`
-- `min_samples_leaf`
-
-The best-performing model was saved as `model.pkl`.
-
-### Final Evaluation
-
-The final tuned Random Forest model was evaluated on a held-out test subset.
-
-The application displays:
-
-- Held-out test R²
-- Test MAE
-- Test RMSE
-- Number of test properties
-
-MAE and RMSE are reported in INR per square foot. R² is not an accuracy percentage.
-
-## Technologies Used
-
-| Technology | Purpose |
-|---|---|
-| Python | Programming language |
-| pandas | Data loading, processing, and tabular analysis |
-| NumPy | Numerical calculations and feature engineering |
-| scikit-learn | Machine-learning models, preprocessing, cross-validation, and tuning |
-| Streamlit | Interactive web application |
-| pickle | Saving and loading the trained model artifact |
-| pathlib | File and folder path handling |
-
-## Project Structure
+## Repository Structure
 
 ```text
 EstateWise-main/
-│
 ├── app.py
 ├── train_model.py
 ├── india_real_estate_valuation.xlsx
 ├── model.pkl
 ├── requirements.txt
-└── README.md
+├── README.md
+└── .gitignore
 ```
 
-## Installation
+The final `model.pkl` is generated after running the training script.
 
-### 1. Clone or Download the Project
+## Methodology
 
-Download or clone the project folder.
+1. Load the India real-estate valuation dataset.
+2. Inspect the dataset structure, columns, and missing values.
+3. Separate the target variable from the input features.
+4. Create an 80/20 training and test split using `random_state=42`.
+5. Extract transaction year and month from the transaction date.
+6. Create seasonal transaction features using sine and cosine transformations.
+7. Compare Linear Regression, Decision Tree, and Random Forest using shuffled 5-fold cross-validation.
+8. Tune the Random Forest pipeline using GridSearchCV.
+9. Evaluate the selected pipeline on the held-out test subset.
+10. Save the fitted pipeline and application metadata.
+11. Load the saved artifact in a Streamlit application.
 
-```bash
-git clone <your-github-repository-link>
-cd EstateWise-main
+### Data Split
+
+| Subset | Properties |
+|---|---:|
+| Training | 331 |
+| Held-out test | 83 |
+
+## Baseline Model Comparison
+
+Results below are mean scores from 5-fold cross-validation on the training subset.
+
+| Model | CV MAE | CV RMSE | CV R² |
+|---|---:|---:|---:|
+| Linear Regression | To be updated | To be updated | To be updated |
+| Decision Tree | To be updated | To be updated | To be updated |
+| Random Forest | To be updated | To be updated | To be updated |
+
+The model with the lowest cross-validated RMSE and MAE, along with the highest R², will be selected for hyperparameter tuning.
+
+These results do not establish statistical significance or universal superiority over other algorithms.
+
+## Hyperparameter Tuning
+
+GridSearchCV evaluates the following search space:
+
+| Parameter | Tested values |
+|---|---|
+| `n_estimators` | 100, 200 |
+| `max_depth` | None, 10, 20 |
+| `min_samples_leaf` | 1, 2, 4 |
+
+The search uses 18 parameter combinations and 5 cross-validation folds, producing 90 cross-validation fits.
+
+### Selected Configuration
+
+```text
+n_estimators = To be updated after training
+max_depth = To be updated after training
+min_samples_leaf = To be updated after training
 ```
 
-### 2. Create a Virtual Environment
+The selected mean CV RMSE will be updated after training.
 
-```bash
+## Held-Out Test Results
+
+| Metric | Result |
+|---|---:|
+| MAE | To be updated |
+| RMSE | To be updated |
+| R² | To be updated |
+
+MAE and RMSE are expressed in INR per square foot.
+
+R² is not an accuracy percentage.
+
+The held-out results describe one test split. They do not establish performance in other geographic areas or future markets.
+
+## Run Locally
+
+Run the following commands from the project root.
+
+### 1. Create a virtual environment
+
+```powershell
 python -m venv .venv
 ```
 
-Activate the virtual environment:
+### 2. Activate the virtual environment
 
-```bash
-.venv\Scripts\activate
+```powershell
+.\.venv\Scripts\activate
 ```
 
-### 3. Install Requirements
+### 3. Install dependencies
 
-```bash
+```powershell
 pip install -r requirements.txt
 ```
 
 If `requirements.txt` is not available, install the required libraries using:
 
-```bash
+```powershell
 pip install pandas numpy scikit-learn streamlit openpyxl
 ```
 
-## How to Run the Project
+### 4. Verify the dataset
 
-### Step 1: Train the Model
+Ensure the Excel file exists at:
 
-Make sure `india_real_estate_valuation.xlsx` is in the project folder.
+```text
+india_real_estate_valuation.xlsx
+```
 
-Run:
+### 5. Train the model
 
-```bash
+```powershell
 python train_model.py
 ```
 
-This will:
+This reruns model comparison, tuning, and evaluation, and overwrites the generated model file.
 
-- Load the India real-estate dataset.
-- Prepare features.
-- Compare Linear Regression, Decision Tree, and Random Forest.
-- Perform 5-fold cross-validation.
-- Tune the Random Forest model using GridSearchCV.
-- Evaluate the final model on the test set.
-- Save the trained pipeline as `model.pkl`.
+### 6. Launch the application
 
-### Step 2: Run the Streamlit Application
-
-```bash
+```powershell
 python -m streamlit run app.py
 ```
 
-The application will open in the browser at:
+Open the Local URL printed in the terminal:
 
 ```text
 http://localhost:8501
 ```
 
-## How to Use the Application
+## Application Features
 
-1. Open the EstateWise India application.
-2. Select the property city, state, and locality.
-3. Enter property age, metro distance, nearby convenience stores, property area, latitude, and longitude.
-4. Select the transaction date.
-5. Click **Generate Estimate**.
-6. Review the estimated price per square foot and estimated total property value.
+- Professional English interface
+- City, state, and locality selection
+- Property and transaction input form
+- Property-area-based total value calculation
+- Saved-pipeline inference
+- Price-per-square-foot estimate
+- Held-out model-performance panel
+- Submitted-input summary
+- Model comparison and hyperparameter details
+- Clearly stated scope and limitations
 
-## Output
+## Saved Model
 
-The application provides:
+`model.pkl` contains:
 
-- Estimated price per square foot in INR.
-- Estimated total property value in INR.
-- Submitted property details.
-- Model evaluation metrics.
-- Methodology and limitations.
+- Fitted prediction pipeline
+- Feature names and order
+- Training-data input ranges
+- Default and example inputs
+- City, state, and locality options
+- Evaluation metrics
+- Selected hyperparameters
 
-The total property value is calculated as:
+The application loads the saved artifact and does not retrain the model when generating predictions.
 
-```text
-Estimated Total Value = Estimated Price per Sq Ft × Property Area
-```
-
-## Deployment
-
-The project can be deployed using Streamlit Community Cloud.
-
-1. Upload the project files to a GitHub repository.
-2. Visit [Streamlit Community Cloud](https://share.streamlit.io/).
-3. Create a new app.
-4. Connect the GitHub repository.
-5. Select the main branch.
-6. Set the main file path as `app.py`.
-7. Deploy the application.
-
-Streamlit Community Cloud allows users to deploy an app directly from a GitHub repository and provides a shareable application URL. [5][230]
+Only load Pickle artifacts from trusted sources. Use a compatible Python and dependency environment.
 
 ## Limitations
 
-- The dataset contains a limited number of historical property records.
-- The model is not validated for current market prices.
-- Predictions may be unreliable for locations or feature combinations not represented in the training data.
-- The model does not include features such as floor number, number of bedrooms, furnishing status, property condition, or legal approvals.
-- The application is an educational prototype and should not be used as professional real-estate valuation advice.
+- The dataset is small, historical, and limited to the cities included in the dataset.
+- The model is not validated for current property prices.
+- The primary prediction is price per square foot, not a guaranteed total property value.
+- Property attributes absent from the dataset are not represented.
+- Individually valid input ranges do not guarantee realistic property combinations.
+- Coordinates outside the training-data coverage may produce unreliable estimates.
+- The output is not a guaranteed sale price or a confidence interval.
+- This project is an educational demonstration, not professional real-estate valuation advice.
+
+## Deployment
+
+Public deployment is pending. The deployed application URL will be added after deployment and verification.
 
 ## Future Improvements
 
 - Use a larger and more recent Indian property dataset.
-- Add features such as BHK, floor number, furnishing, property type, and amenities.
+- Add features such as BHK, floor number, furnishing status, property type, and amenities.
 - Include uncertainty ranges or prediction intervals.
 - Improve geographic validation using maps and location-based features.
 - Deploy the application with a custom domain and monitoring.
 
-## Author
+## Team Contributions
 
-**Harsh**  
-Jodhpur, Rajasthan, India
+Add each member's actual name and contribution before submission.
 
-## License
-
-This project is created for educational purposes.
+All members should understand the complete workflow.
